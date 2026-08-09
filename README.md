@@ -14,6 +14,7 @@
 | Problem 2.7 | 已完成 | 压缩率、跨域、吞吐量和全量数据编码实验 | [`scripts/problem_2_7_analyze_tokenizer.py`](./scripts/problem_2_7_analyze_tokenizer.py)、[`scripts/problem_2_7_encode_datasets.py`](./scripts/problem_2_7_encode_datasets.py) | [`docs/problem_2_7_results.md`](./docs/problem_2_7_results.md) |
 | Problem 3.3.2 | 已完成 | 无 bias 的 Linear 模块 | `cs336_basics/model.py::Linear` | `tests/adapters.py::run_linear`、`tests/test_model.py::test_linear` |
 | Problem 3.3.3 | 已完成 | Embedding 查表模块 | `cs336_basics/model.py::Embedding` | `tests/adapters.py::run_embedding`、`tests/test_model.py::test_embedding` |
+| Problem 3.4.1 | 已完成 | RMSNorm 归一化模块 | `cs336_basics/model.py::RMSNorm` | `tests/adapters.py::run_rmsnorm`、`tests/test_model.py::test_rmsnorm` |
 
 核心实现放在 `cs336_basics/`，独立训练和实验程序放在 `scripts/`，课程测试及其 adapter 放在 `tests/`。`docs/` 只保留需要提交或记录的作业答案与实验结果。
 
@@ -31,10 +32,10 @@ uv sync
 uv run pytest tests/test_train_bpe.py tests/test_tokenizer.py -v
 ```
 
-测试 Linear 和 Embedding：
+测试 Linear、Embedding 和 RMSNorm：
 
 ```bash
-uv run pytest -k "test_linear or test_embedding" -v
+uv run pytest -k "test_linear or test_embedding or test_rmsnorm" -v
 ```
 
 ## 数据说明
