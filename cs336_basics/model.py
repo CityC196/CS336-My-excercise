@@ -78,3 +78,42 @@ class RMSNorm(nn.Module):
         )
         ans = x / torch.sqrt(mean_square + self.eps) *self.weight
         return ans.to(in_dtype)
+
+class SwiGLU(nn.Module):
+    def __init__(
+        self,
+        d_model:int,
+        d_ff:int,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None
+    ):
+        super().__init__()
+        self.d_model = d_model
+        self.d_ff = d_ff
+        self.w1 = Linear(
+            in_features=d_model,
+            out_features=d_ff,
+            device=device,
+            dtype=dtype,
+        )
+
+        self.w2 = Linear(
+            in_features=d_ff,
+            out_features=d_model,
+            device=device,
+            dtype=dtype,
+        )
+
+        self.w3 = Linear(
+            in_features=d_model,
+            out_features=d_ff,
+            device=device,
+            dtype=dtype,
+        )
+    def forward(self, x:torch.Tensor) ->torch.Tensor:
+        w1_x = self.w1(x)
+        w3_x = self.w3(x) #self.w3会直接利用call自动搜索forward
+        silu_output = w1_x * torch.sigmoid(w1_x)
+        gated_output = silu_output * w3_x
+        output = self.w2(gated_output)
+        return output

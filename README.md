@@ -15,6 +15,7 @@
 | Problem 3.3.2 | 已完成 | 无 bias 的 Linear 模块 | `cs336_basics/model.py::Linear` | `tests/adapters.py::run_linear`、`tests/test_model.py::test_linear` |
 | Problem 3.3.3 | 已完成 | Embedding 查表模块 | `cs336_basics/model.py::Embedding` | `tests/adapters.py::run_embedding`、`tests/test_model.py::test_embedding` |
 | Problem 3.4.1 | 已完成 | RMSNorm 归一化模块 | `cs336_basics/model.py::RMSNorm` | `tests/adapters.py::run_rmsnorm`、`tests/test_model.py::test_rmsnorm` |
+| Problem 3.4.2 | 已完成 | SwiGLU 前馈网络 | `cs336_basics/model.py::SwiGLU` | `tests/adapters.py::run_swiglu`、`tests/test_model.py::test_swiglu` |
 
 核心实现放在 `cs336_basics/`，独立训练和实验程序放在 `scripts/`，课程测试及其 adapter 放在 `tests/`。`docs/` 只保留需要提交或记录的作业答案与实验结果。
 
@@ -32,10 +33,10 @@ uv sync
 uv run pytest tests/test_train_bpe.py tests/test_tokenizer.py -v
 ```
 
-测试 Linear、Embedding 和 RMSNorm：
+测试 Linear、Embedding、RMSNorm 和 SwiGLU：
 
 ```bash
-uv run pytest -k "test_linear or test_embedding or test_rmsnorm" -v
+uv run pytest -k "test_linear or test_embedding or test_rmsnorm or test_swiglu" -v
 ```
 
 ## 数据说明
