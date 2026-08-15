@@ -16,6 +16,9 @@
 | Problem 3.3.3 | 已完成 | Embedding 查表模块 | `cs336_basics/model.py::Embedding` | `tests/adapters.py::run_embedding`、`tests/test_model.py::test_embedding` |
 | Problem 3.4.1 | 已完成 | RMSNorm 归一化模块 | `cs336_basics/model.py::RMSNorm` | `tests/adapters.py::run_rmsnorm`、`tests/test_model.py::test_rmsnorm` |
 | Problem 3.4.2 | 已完成 | SwiGLU 前馈网络 | `cs336_basics/model.py::SwiGLU` | `tests/adapters.py::run_swiglu`、`tests/test_model.py::test_swiglu` |
+| Problem (rope) | 已完成 | Rotary Positional Embedding | `cs336_basics/model.py::RotaryPositionalEmbedding` | `tests/adapters.py::run_rope`、`tests/test_model.py::test_rope` |
+| Problem (softmax) | 已完成 | 数值稳定的任意维度 Softmax | `cs336_basics/model.py::softmax` | `tests/adapters.py::run_softmax`、课程测试 `test_softmax_matches_pytorch` |
+| Problem (scaled_dot_product_attention) | 已完成 | 支持布尔 mask 的 Scaled Dot-Product Attention | `cs336_basics/model.py::scaled_dot_product_attention` | `tests/adapters.py::run_scaled_dot_product_attention`、`tests/test_model.py::test_scaled_dot_product_attention`、`tests/test_model.py::test_4d_scaled_dot_product_attention` |
 
 核心实现放在 `cs336_basics/`，独立训练和实验程序放在 `scripts/`，课程测试及其 adapter 放在 `tests/`。`docs/` 只保留需要提交或记录的作业答案与实验结果。
 
@@ -33,10 +36,18 @@ uv sync
 uv run pytest tests/test_train_bpe.py tests/test_tokenizer.py -v
 ```
 
-测试 Linear、Embedding、RMSNorm 和 SwiGLU：
+测试仓库自带且可直接运行的模块：
 
 ```bash
-uv run pytest -k "test_linear or test_embedding or test_rmsnorm or test_swiglu" -v
+uv run pytest tests/test_train_bpe.py tests/test_model.py::test_linear tests/test_model.py::test_embedding -v
+```
+
+Tokenizer 的 tiktoken 对照测试首次运行时可能需要联网获取 GPT-2 编码数据。
+
+RoPE、RMSNorm、SwiGLU、Softmax 和 Attention 的完整课程测试依赖对应 handout 版本提供的测试文件与 `tests/_snapshots/` 资产，这些本地课程资产不纳入本仓库。准备好匹配版本的资产后，可运行：
+
+```bash
+uv run pytest tests/test_model.py::test_rmsnorm tests/test_model.py::test_swiglu tests/test_model.py::test_rope tests/test_nn_utils.py::test_softmax_matches_pytorch tests/test_model.py::test_scaled_dot_product_attention tests/test_model.py::test_4d_scaled_dot_product_attention -v
 ```
 
 ## 数据说明

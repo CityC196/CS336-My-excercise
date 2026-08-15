@@ -117,3 +117,129 @@ class SwiGLU(nn.Module):
         gated_output = silu_output * w3_x
         output = self.w2(gated_output)
         return output
+
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(
+        self,
+        theta: float,
+        d_k: int,
+        max_seq_len: int,
+        device: torch.device | None = None
+    ):
+        super().__init__()
+        self.theta = theta
+        self.d_k = d_k
+        self.max_seq_len = max_seq_len
+
+        dimension_indices = torch.arange(
+            0,
+            d_k,
+            2,
+            device=device,
+            dtype=torch.float32,
+        )
+        inverse_frequencies = theta ** (-dimension_indices / d_k)
+        token_positions = torch.arange(
+            max_seq_len,
+            device=device,
+            dtype=torch.float32,
+        )
+        rotation_angles = einsum(
+            token_positions,
+            inverse_frequencies,
+            "position, dimension -> position dimension",
+        )
+
+        self.register_buffer(
+            "cos_values",
+            torch.cos(rotation_angles),
+            persistent=False,
+        )
+        self.register_buffer(
+            "sin_values",
+            torch.sin(rotation_angles),
+            persistent=False,
+        )
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        token_positions: torch.Tensor,
+    ) -> torch.Tensor:
+        cos_values = self.cos_values[token_positions]
+        sin_values = self.sin_values[token_positions]
+
+        while cos_values.ndim < x.ndim:
+            cos_values = cos_values.unsqueeze(-3)
+            sin_values = sin_values.unsqueeze(-3)
+
+        cos_values = cos_values.to(dtype=x.dtype)
+        sin_values = sin_values.to(dtype=x.dtype)
+
+        x_even = x[..., 0::2]
+        x_odd = x[..., 1::2]
+
+        rotated_even = x_even * cos_values - x_odd * sin_values
+        rotated_odd = x_even * sin_values + x_odd * cos_values
+
+        output = torch.empty_like(x)
+        output[..., 0::2] = rotated_even
+        output[..., 1::2] = rotated_odd
+        return output
+
+def softmax(
+    x: torch.Tensor,
+    dim: int,
+) -> torch.Tensor:
+    maximum_values = torch.max(
+        x,
+        dim=dim,
+        keepdim=True,
+    ).values
+
+    shifted_x = x - maximum_values
+
+    exp_values = torch.exp(shifted_x)
+    exp_sum = torch.sum(
+        exp_values,
+        dim=dim,
+        keepdim=True,
+    )
+    output = exp_values / exp_sum
+    return output
+
+
+def scaled_dot_product_attention(
+    Q: torch.Tensor,
+    K: torch.Tensor,
+    V: torch.Tensor,
+    mask: torch.Tensor | None = None,
+) -> torch.Tensor:
+    d_k = Q.shape[-1]
+
+    attention_scores = einsum(
+        Q,
+        K,
+        "... queries d_k, ... keys d_k -> ... queries keys",
+    )
+    scaled_attention_scores = attention_scores / math.sqrt(d_k)
+
+    if mask is not None:
+        additive_mask = torch.zeros_like(scaled_attention_scores)
+        additive_mask = additive_mask.masked_fill(
+            ~mask,
+            float("-inf"),
+        ) #运算技巧
+        scaled_attention_scores = scaled_attention_scores + additive_mask
+
+    attention_weights = softmax(
+        x=scaled_attention_scores,
+        dim=-1,
+    )
+
+    output = einsum(
+        attention_weights,
+        V,
+        "... queries keys, ... keys d_v -> ... queries d_v",
+    )
+    return output
