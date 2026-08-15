@@ -1,6 +1,7 @@
 # CS336 Assignment 1: Basics
 
 这是 Stanford CS336 *Language Modeling from Scratch* 的 Assignment 1 练习仓库，内容包括 byte-level BPE、Tokenizer、tokenizer experiments，以及 Transformer 的基础神经网络模块。
+由于本人Python零基础，因此是边自己写边问AI，代码中可能会有一些AI习惯的写法。
 
 作业说明：[Stanford CS336 Assignment 1: Basics](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)
 
