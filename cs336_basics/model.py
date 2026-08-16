@@ -1,7 +1,7 @@
 import math
 import torch
 from torch import nn
-from einops import einsum
+from einops import einsum, rearrange
 
 class Linear(nn.Module):
     def __init__(
@@ -243,3 +243,176 @@ def scaled_dot_product_attention(
         "... queries keys, ... keys d_v -> ... queries d_v",
     )
     return output
+
+
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        theta: float | None = None,
+        max_seq_len: int | None = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
+    ):
+        super().__init__()
+
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
+
+        if theta is None and max_seq_len is None:
+            self.rope = None
+        elif theta is not None and max_seq_len is not None:
+            self.rope = RotaryPositionalEmbedding(
+                theta=theta,
+                d_k=self.d_k,
+                max_seq_len=max_seq_len,
+                device=device,
+            )
+
+        self.q_proj = Linear(
+            in_features=d_model,
+            out_features=d_model,
+            device=device,
+            dtype=dtype,
+        )
+        self.k_proj = Linear(
+            in_features=d_model,
+            out_features=d_model,
+            device=device,
+            dtype=dtype,
+        )
+        self.v_proj = Linear(
+            in_features=d_model,
+            out_features=d_model,
+            device=device,
+            dtype=dtype,
+        )
+        self.output_proj = Linear(
+            in_features=d_model,
+            out_features=d_model,
+            device=device,
+            dtype=dtype,
+        )
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        token_positions: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        queries = self.q_proj(x)
+        keys = self.k_proj(x)
+        values = self.v_proj(x)
+
+        queries = rearrange(
+            queries,
+            "... sequence_length (num_heads d_k) -> ... num_heads sequence_length d_k",
+            num_heads=self.num_heads,
+        )
+        keys = rearrange(
+            keys,
+            "... sequence_length (num_heads d_k) -> ... num_heads sequence_length d_k",
+            num_heads=self.num_heads,
+        )
+        values = rearrange(
+            values,
+            "... sequence_length (num_heads d_v) -> ... num_heads sequence_length d_v",
+            num_heads=self.num_heads,
+        )
+
+        sequence_length = x.shape[-2]
+        if self.rope is not None:
+            if token_positions is None:
+                token_positions = torch.arange(
+                    sequence_length,
+                    device=x.device,
+                )
+            queries = self.rope(
+                queries,
+                token_positions,
+            )
+            keys = self.rope(
+                keys,
+                token_positions,
+            )
+
+        sequence_positions = torch.arange(
+            sequence_length,
+            device=x.device,
+        )
+        query_positions = rearrange(
+            sequence_positions,
+            "query -> query 1",
+        )
+        key_positions = rearrange(
+            sequence_positions,
+            "key -> 1 key",
+        )
+        causal_mask = query_positions >= key_positions
+
+        attention_output = scaled_dot_product_attention(
+            Q=queries,
+            K=keys,
+            V=values,
+            mask=causal_mask,
+        )
+        attention_output = rearrange(
+            attention_output,
+            "... num_heads sequence_length d_v -> ... sequence_length (num_heads d_v)",
+        )
+
+        output = self.output_proj(attention_output)
+        return output
+
+
+class TransformerBlock(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        theta: float,
+        max_seq_len: int,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
+    ):
+        super().__init__()
+
+        self.attn = MultiHeadSelfAttention(
+            d_model=d_model,
+            num_heads=num_heads,
+            theta=theta,
+            max_seq_len=max_seq_len,
+            device=device,
+            dtype=dtype,
+        )
+        self.ln1 = RMSNorm(
+            d_model=d_model,
+            device=device,
+            dtype=dtype,
+        )
+        self.ffn = SwiGLU(
+            d_model=d_model,
+            d_ff=d_ff,
+            device=device,
+            dtype=dtype,
+        )
+        self.ln2 = RMSNorm(
+            d_model=d_model,
+            device=device,
+            dtype=dtype,
+        )
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        token_positions: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        x = x + self.attn(
+            self.ln1(x),
+            token_positions=token_positions,
+        )
+        x = x + self.ffn(self.ln2(x))
+        return x
