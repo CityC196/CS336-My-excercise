@@ -20,6 +20,10 @@
 | Problem (rope) | 已完成 | Rotary Positional Embedding | `cs336_basics/model.py::RotaryPositionalEmbedding` | `tests/adapters.py::run_rope`、`tests/test_model.py::test_rope` |
 | Problem (softmax) | 已完成 | 数值稳定的任意维度 Softmax | `cs336_basics/model.py::softmax` | `tests/adapters.py::run_softmax`、课程测试 `test_softmax_matches_pytorch` |
 | Problem (scaled_dot_product_attention) | 已完成 | 支持布尔 mask 的 Scaled Dot-Product Attention | `cs336_basics/model.py::scaled_dot_product_attention` | `tests/adapters.py::run_scaled_dot_product_attention`、`tests/test_model.py::test_scaled_dot_product_attention`、`tests/test_model.py::test_4d_scaled_dot_product_attention` |
+| Problem 3.4.5 | 已完成 | 带 RoPE 和 causal mask 的多头自注意力 | `cs336_basics/model.py::MultiHeadSelfAttention` | `tests/adapters.py::run_multihead_self_attention`、`run_multihead_self_attention_with_rope` 及对应课程测试 |
+| Problem 3.5 / transformer_block | 已完成 | Pre-norm Transformer block | `cs336_basics/model.py::TransformerBlock` | `tests/adapters.py::run_transformer_block`、`tests/test_model.py::test_transformer_block` |
+| Problem 3.5 / transformer_lm | 已完成 | 完整 Transformer 语言模型 | `cs336_basics/Transformer.py::TransformerLM` | `tests/adapters.py::run_transformer_lm`、完整输入与截断输入测试 |
+| Problem 3.5 / transformer_accounting | 已完成 | 参数量、内存与矩阵乘 FLOPs 核算 | [`docs/problem_3_5_resource_accounting.md`](./docs/problem_3_5_resource_accounting.md) | 通式以及 GPT-2 Small、Medium、Large、XL 和 16K context 计算 |
 
 核心实现放在 `cs336_basics/`，独立训练和实验程序放在 `scripts/`，课程测试及其 adapter 放在 `tests/`。`docs/` 只保留需要提交或记录的作业答案与实验结果。
 
@@ -45,10 +49,22 @@ uv run pytest tests/test_train_bpe.py tests/test_model.py::test_linear tests/tes
 
 Tokenizer 的 tiktoken 对照测试首次运行时可能需要联网获取 GPT-2 编码数据。
 
-RoPE、RMSNorm、SwiGLU、Softmax 和 Attention 的完整课程测试依赖对应 handout 版本提供的测试文件与 `tests/_snapshots/` 资产，这些本地课程资产不纳入本仓库。准备好匹配版本的资产后，可运行：
+RoPE、RMSNorm、SwiGLU、Softmax、Attention 和 Transformer 的完整课程测试依赖对应 handout 版本提供的测试文件与 `tests/_snapshots/` 资产，这些本地课程资产不纳入本仓库。准备好匹配版本的资产后，可运行：
 
 ```bash
-uv run pytest tests/test_model.py::test_rmsnorm tests/test_model.py::test_swiglu tests/test_model.py::test_rope tests/test_nn_utils.py::test_softmax_matches_pytorch tests/test_model.py::test_scaled_dot_product_attention tests/test_model.py::test_4d_scaled_dot_product_attention -v
+uv run pytest \
+  tests/test_model.py::test_rmsnorm \
+  tests/test_model.py::test_swiglu \
+  tests/test_model.py::test_rope \
+  tests/test_nn_utils.py::test_softmax_matches_pytorch \
+  tests/test_model.py::test_scaled_dot_product_attention \
+  tests/test_model.py::test_4d_scaled_dot_product_attention \
+  tests/test_model.py::test_multihead_self_attention \
+  tests/test_model.py::test_multihead_self_attention_with_rope \
+  tests/test_model.py::test_transformer_block \
+  tests/test_model.py::test_transformer_lm \
+  tests/test_model.py::test_transformer_lm_truncated_input \
+  -v
 ```
 
 ## 数据说明
